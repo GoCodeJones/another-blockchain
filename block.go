@@ -1,9 +1,6 @@
 package main
 
 import (
-	"bytes"
-	"crypto/sha256"
-	"fmt"
 	"time"
 )
 
@@ -24,38 +21,29 @@ type Block struct {
 	// Hash é a impressão digital única deste bloco,
 	// calculada a partir dos seus próprios dados.
 	Hash []byte
-}
 
-// calcularHash gera o hash SHA-256 do bloco.
-// Concatenamos todos os campos relevantes em bytes e aplicamos SHA-256.
-// Se qualquer campo mudar (inclusive o timestamp), o hash muda completamente.
-func (b *Block) calcularHash() {
-	// Convertemos o timestamp para string e depois para bytes
-	timestamp := []byte(fmt.Sprintf("%d", b.Timestamp))
-
-	// Juntamos todos os campos do bloco em um único slice de bytes
-	cabecalho := bytes.Join(
-		[][]byte{b.HashAnterior, b.Data, timestamp},
-		[]byte{}, // separador vazio — apenas concatena
-	)
-
-	// Aplicamos SHA-256 e armazenamos o resultado em b.Hash
-	hash := sha256.Sum256(cabecalho)
-	b.Hash = hash[:] // hash[:] converte [32]byte para []byte
+	// Nonce é o número que o minerador varia até encontrar um hash válido.
+	// É a "prova" de que trabalho computacional foi realizado.
+	Nonce int
 }
 
 // NovoBloco cria e retorna um novo bloco com os dados fornecidos.
-// Recebe os dados do bloco e o hash do bloco anterior na cadeia.
+// Agora executa o Proof of Work para encontrar um hash válido antes de retornar.
 func NovoBloco(dados string, hashAnterior []byte) *Block {
 	bloco := &Block{
 		Timestamp:    time.Now().Unix(),
 		Data:         []byte(dados),
 		HashAnterior: hashAnterior,
 		Hash:         []byte{},
+		Nonce:        0,
 	}
 
-	// Calculamos o hash logo após criar o bloco
-	bloco.calcularHash()
+	// Executamos o PoW — isso pode levar alguns milissegundos
+	pow := NovoProofOfWork(bloco)
+	nonce, hash := pow.Executar()
+
+	bloco.Nonce = nonce
+	bloco.Hash = hash
 
 	return bloco
 }
